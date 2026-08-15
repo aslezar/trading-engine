@@ -1,0 +1,115 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create input.txt",
+            "type": "shell",
+            "group": "none",
+            "command": "touch",
+            "args": [
+                "${fileDirname}/input.txt"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false,
+                "close": true
+            }
+        },
+        {
+            "label": "Build C++ File",
+            "type": "cppbuild",
+            "command": "g++-16",
+            "args": [
+                // -02 -Winvalid-pch -fsanitize=address -std=c++20
+                // Recompile if any above flags are changed
+                "-DLOCAL_RUN",
+                "-I${workspaceFolder}",
+                "-O2",
+                "-Winvalid-pch",
+                "-fsanitize=address",
+                "-std=c++20",
+                "-Wall",
+                // "-Wconversion", // For conversion warning
+                "-fdiagnostics-color=always", // For color
+                "-g", // For debugging
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "dependsOn": [
+                "Create input.txt"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build",
+            "detail": "compiler: g++-16"
+        },
+        {
+            "label": "Run C++ file",
+            "type": "shell",
+            "command": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [
+                "0<input.txt",
+                "&&",
+                "rm",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "dependsOn": [
+                "Build C++ File",
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "With input file",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run C++ file(no input file)",
+            "type": "shell",
+            "command": "${fileDirname}/${fileBasenameNoExtension}",
+            "args": [
+                "&&",
+                "rm",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "dependsOn": [
+                "Build C++ File",
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "group": "build",
+            "detail": "No input file",
+            "problemMatcher": []
+        },
+        {
+            "type": "shell",
+            "label": "Remove Executable",
+            "command": "rm ${fileDirname}/${fileBasenameNoExtension}",
+            "group": "none",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false,
+                "close": true
+            }
+        },
+    ]
+}
