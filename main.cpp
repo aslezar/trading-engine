@@ -20,6 +20,8 @@ private:
     int64_t price = 10000;
 
 public:
+    using TickHandler = void (*)(void *context, const Tick &tick);
+
     static int TICK_RATE;
 
     Tick makeTick(uint64_t ts)
@@ -37,14 +39,14 @@ public:
         return tick;
     }
 
-    void start(const std::function<void(const Tick &)> &onTick)
+    void start(TickHandler onTick, void *context)
     {
         uint64_t ts = 0;
 
         while (true)
         {
             Tick tick = makeTick(ts++);
-            onTick(tick);
+            onTick(context, tick);
 
             std::this_thread::sleep_for(
                 std::chrono::microseconds(1'000'000 / TICK_RATE));
@@ -175,6 +177,11 @@ public:
           feed(feed),
           execution(execution) {}
 
+    static void onTickStatic(void *context, const Tick &tick)
+    {
+        static_cast<TradingEngine *>(context)->onTick(tick);
+    }
+
     inline void onTick(const Tick &tick)
     {
         book.update(tick);
@@ -188,11 +195,7 @@ public:
 
     void start()
     {
-        feed.start(
-            [this](const Tick &tick)
-            {
-                onTick(tick);
-            });
+        feed.start(&TradingEngine::onTickStatic, this);
     }
 };
 
@@ -212,7 +215,7 @@ struct BenchmarkStats
 static void printBenchmarkReport(const BenchmarkStats &stats)
 {
     std::cout << "==============================\n";
-    std::cout << "Stage 0 Benchmark Report\n";
+    std::cout << "Stage 3 Benchmark Report\n";
     std::cout << "==============================\n";
     std::cout << "Ticks: " << stats.totalTicks << '\n';
     std::cout << "Orders: " << stats.totalOrders << '\n';
