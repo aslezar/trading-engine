@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 #include <thread>
 #include <vector>
@@ -90,24 +91,95 @@ public:
 class OrderBook
 {
 private:
-    int64_t bestBid = 0;
-    int64_t bestAsk = 0;
+    using BidLevels = std::map<int64_t, int64_t, std::greater<int64_t>>;
+    using AskLevels = std::map<int64_t, int64_t, std::less<int64_t>>;
+
+    BidLevels bids_;
+    AskLevels asks_;
+    int64_t bestBid_ = 0;
+    int64_t bestAsk_ = 0;
 
 public:
     inline void update(const Tick &tick)
     {
-        bestBid = tick.bid;
-        bestAsk = tick.ask;
+        bids_.clear();
+        asks_.clear();
+
+        bestBid_ = tick.bid;
+        bestAsk_ = tick.ask;
+
+        if (bestBid_ > 0)
+        {
+            bids_[bestBid_] = 1;
+        }
+
+        if (bestAsk_ > 0)
+        {
+            asks_[bestAsk_] = 1;
+        }
+    }
+
+    inline void addBid(int64_t price, int64_t qty)
+    {
+        if (qty <= 0)
+        {
+            return;
+        }
+
+        bids_[price] += qty;
+        if (price > bestBid_)
+        {
+            bestBid_ = price;
+        }
+    }
+
+    inline void addAsk(int64_t price, int64_t qty)
+    {
+        if (qty <= 0)
+        {
+            return;
+        }
+
+        asks_[price] += qty;
+        if (price < bestAsk_ || bestAsk_ == 0)
+        {
+            bestAsk_ = price;
+        }
     }
 
     inline int64_t bid() const
     {
-        return bestBid;
+        return bids_.empty() ? bestBid_ : bids_.begin()->first;
     }
 
     inline int64_t ask() const
     {
-        return bestAsk;
+        return asks_.empty() ? bestAsk_ : asks_.begin()->first;
+    }
+
+    inline int64_t bidQty() const
+    {
+        return bids_.empty() ? 0 : bids_.begin()->second;
+    }
+
+    inline int64_t askQty() const
+    {
+        return asks_.empty() ? 0 : asks_.begin()->second;
+    }
+
+    inline size_t bidLevels() const
+    {
+        return bids_.size();
+    }
+
+    inline size_t askLevels() const
+    {
+        return asks_.size();
+    }
+
+    inline bool hasLiquidity() const
+    {
+        return !bids_.empty() && !asks_.empty();
     }
 };
 
@@ -128,14 +200,14 @@ public:
     {
         const int64_t spread = book.ask() - book.bid();
 
-        if (spread <= spreadThreshold)
+        if (spread <= spreadThreshold || !book.hasLiquidity())
         {
             return false;
         }
 
         order.id = 0;
         order.price = book.bid();
-        order.qty = 1;
+        order.qty = std::max<int64_t>(1, book.bidQty());
         order.isBuy = true;
 
         return true;
@@ -215,7 +287,7 @@ struct BenchmarkStats
 static void printBenchmarkReport(const BenchmarkStats &stats)
 {
     std::cout << "==============================\n";
-    std::cout << "Stage 3 Benchmark Report\n";
+    std::cout << "Stage 4 Benchmark Report\n";
     std::cout << "==============================\n";
     std::cout << "Ticks: " << stats.totalTicks << '\n';
     std::cout << "Orders: " << stats.totalOrders << '\n';
@@ -272,7 +344,7 @@ static void runMicrobenchmarks()
         } });
 
     std::cout << "==============================\n";
-    std::cout << "Stage 2 Microbenchmarks\n";
+    std::cout << "Stage 4 Microbenchmarks\n";
     std::cout << "==============================\n";
     std::cout << "Iterations: " << iterations << '\n';
     std::cout << "OrderBook::update: " << orderBookNs << " ns\n";
