@@ -1,16 +1,15 @@
+#include <cstdint>
 #include <iostream>
 
-struct Tick
-{
-    double bid;
-    double ask;
+struct Tick {
+    int64_t bid;
+    int64_t ask;
     uint64_t ts;
 };
 
-struct Order
-{
+struct Order {
     int id;
-    double price;
+    int64_t price;
     int qty;
     bool isBuy;
 };
