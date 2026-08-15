@@ -1,150 +1,168 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <functional>
+#include <cstdint>
+#include <cstdlib>
+#include "./data.cpp"
 
-using namespace std;
+// ---------- Exchange Simulator ----------
 
-struct Tick
-{
-    double bid;
-    double ask;
-    uint64_t ts;
-};
-
-struct Order
-{
-    int id;
-    double price;
-    int qty;
-    bool isBuy;
-};
-
-// ---------- Market Data ----------
-class MarketDataHandler
-{
+class ExchangeSimulator {
 private:
-    vector<Tick> data;
-    size_t idx = 0;
+    double price = 100.0;
 
 public:
-    MarketDataHandler()
-    {
-        // mock ticks
-        data = {
-            {100.0, 100.2, 1},
-            {100.1, 100.4, 2},
-            {100.2, 100.6, 3},
-            {100.3, 100.35, 4},
-        };
+    static int TICK_RATE;
+
+    void start(const std::function<void(const Tick&)>& onTick) {
+        uint64_t ts = 0;
+
+        while (true) {
+            price += ((std::rand() % 100) - 50) * 0.001;
+
+            Tick tick{
+                price,
+                price + 0.1,
+                ts++
+            };
+
+            onTick(tick);
+
+            std::this_thread::sleep_for(
+                std::chrono::microseconds(1'000'000 / TICK_RATE)
+            );
+        }
     }
 
-    bool getNextTick(Tick &tick)
-    {
-        if (idx >= data.size())
-            return false;
-        tick = data[idx++];
-        return true;
+    void execute(const Order& order) {
+        std::cout << "EXECUTED "
+                  << (order.isBuy ? "BUY " : "SELL ")
+                  << "id=" << order.id
+                  << " price=" << order.price
+                  << " qty=" << order.qty
+                  << '\n';
     }
 };
 
-class OrderBook
-{
+int ExchangeSimulator::TICK_RATE = 10;
+
+// ---------- Order Book ----------
+
+class OrderBook {
 private:
-    double bestBid = 0.0;
-    double bestAsk = 0.0;
+    double bestBid = 0;
+    double bestAsk = 0;
 
 public:
-    inline void update(const Tick &tick)
-    {
+    inline void update(const Tick& tick) {
         bestBid = tick.bid;
         bestAsk = tick.ask;
     }
 
-    inline double getBid() const { return bestBid; }
-    inline double getAsk() const { return bestAsk; }
+    inline double bid() const {
+        return bestBid;
+    }
+
+    inline double ask() const {
+        return bestAsk;
+    }
 };
 
-class Strategy
-{
+// ---------- Strategy ----------
+
+class Strategy {
 private:
     double spreadThreshold;
 
 public:
-    Strategy(double threshold) : spreadThreshold(threshold) {}
+    explicit Strategy(double threshold)
+        : spreadThreshold(threshold) {}
 
-    inline bool generateSignal(const OrderBook &book, Order &order)
-    {
-        double bid = book.getBid();
-        double ask = book.getAsk();
+    inline bool generate(
+        const OrderBook& book,
+        Order& order
+    ) {
+        const double spread = book.ask() - book.bid();
 
-        if (ask - bid > spreadThreshold)
-        {
-            order = {0, bid, 1, true}; // buy example
+        if (spread > spreadThreshold) {
+            order = {
+                0,
+                book.bid(),
+                1,
+                true
+            };
+
             return true;
         }
+
         return false;
     }
 };
 
-class OrderManager
-{
+// ---------- Order Manager ----------
+
+class OrderManager {
 private:
-    int nextOrderId = 1;
+    int nextId = 1;
 
 public:
-    inline void prepare(Order &order)
-    {
-        order.id = nextOrderId++;
+    inline void prepare(Order& order) {
+        order.id = nextId++;
     }
 };
 
-class Exchange
-{
-public:
-    inline void send(const Order &o)
-    {
-        cout << (o.isBuy ? "BUY " : "SELL ")
-             << "id=" << o.id
-             << " price=" << o.price
-             << " qty=" << o.qty << "\n";
-    }
-};
+// ---------- Trading Engine ----------
 
-class TradingEngine
-{
+class TradingEngine {
 private:
-    MarketDataHandler md;
     OrderBook book;
     Strategy strategy;
-    OrderManager om;
-    Exchange ex;
+    OrderManager orderManager;
+    ExchangeSimulator& exchange;
 
 public:
-    TradingEngine(double threshold)
-        : strategy(threshold) {}
+    TradingEngine(
+        ExchangeSimulator& exchange,
+        double spreadThreshold
+    )
+        : strategy(spreadThreshold),
+          exchange(exchange) {}
 
-    void run()
-    {
-        Tick tick;
+    inline void onTick(const Tick& tick) {
+        book.update(tick);
+
         Order order;
 
-        while (md.getNextTick(tick))
-        {
-
-            book.update(tick);
-
-            if (strategy.generateSignal(book, order))
-            {
-                om.prepare(order);
-                ex.send(order);
-            }
+        if (strategy.generate(book, order)) {
+            orderManager.prepare(order);
+            exchange.execute(order);
         }
+    }
+
+    void start() {
+        exchange.start(
+            [this](const Tick& tick) {
+                onTick(tick);
+            }
+        );
     }
 };
 
-int main(int argc, char const *argv[])
-{
+// ---------- Main ----------
 
-    TradingEngine engine(0.2); // spread threshold
-    engine.run();
+int main() {
+    ExchangeSimulator exchange;
+
+    // 10 ticks/sec
+    ExchangeSimulator::TICK_RATE = 10;
+
+    TradingEngine engine(
+        exchange,
+        0.05
+    );
+
+    engine.start();
 
     return 0;
 }
