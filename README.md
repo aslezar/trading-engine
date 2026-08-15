@@ -79,5 +79,22 @@ if (ask - bid > threshold) → BUY
 * Implement full order book
 * Add latency measurement
 
-```
-```
+---
+
+## Roadmap
+
+| Stage  | Focus                    | What we build                                     | Benchmarking                  |
+| ------ | ------------------------ | ------------------------------------------------- | ----------------------------- |
+| **0**  | Current baseline         | Current simulator + engine                        | **Baseline measurements**     |
+| **1**  | Clean architecture       | Separate market data, execution, engine           | Basic latency instrumentation |
+| **2**  | Data optimization        | Integer prices, compact structs, reusable objects | **Microbenchmarks**           |
+| **3**  | Hot-path optimization    | Remove allocations, `std::function`, I/O          | **A/B benchmark suite**       |
+| **4**  | Realistic Order Book     | Multiple price levels                             | Order-book benchmarks         |
+| **5**  | Benchmark infrastructure | Dedicated benchmark framework + reports           | **Full benchmark harness**    |
+| **6**  | Lock-free                | SPSC ring buffer                                  | Queue latency/throughput      |
+| **7**  | Multithreading           | Market-data → strategy → execution threads        | End-to-end latency            |
+| **8**  | CPU optimization         | Affinity, cache, false sharing, NUMA              | p50/p99/p99.9                 |
+| **9**  | Networking               | UDP market-data feed                              | Network → order latency       |
+| **10** | OS/network tuning        | Busy polling, kernel tuning, etc.                 | Tail-latency comparison       |
+| **11** | Kernel bypass            | DPDK                                              | Full low-latency comparison   |
+| **12** | Advanced                 | Optional FPGA/SmartNIC                            | Final comparison              |

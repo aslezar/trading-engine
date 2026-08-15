@@ -1,0 +1,16 @@
+g++ -O2 -std=c++20 main.cpp -o trading_engine
+./trading_engine --benchmark
+==============================
+Stage 0 Benchmark Report
+==============================
+Ticks: 100000
+Orders: 100000
+Throughput: 18281816.39 ticks/sec
+Latency (ns):
+  min: 0
+  p50: 41
+  p90: 42
+  p95: 42
+  p99: 42
+  max: 4208
+==============================
