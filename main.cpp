@@ -280,14 +280,31 @@ struct BenchmarkStats
     uint64_t p90Ns = 0;
     uint64_t p95Ns = 0;
     uint64_t p99Ns = 0;
+    uint64_t p999Ns = 0;
+    uint64_t p9999Ns = 0;
     uint64_t maxNs = 0;
     double throughput = 0.0;
+};
+
+struct BenchmarkSuiteSummary
+{
+    int repeats = 0;
+    double meanThroughput = 0.0;
+    double meanMinNs = 0.0;
+    double meanP50Ns = 0.0;
+    double meanP90Ns = 0.0;
+    double meanP95Ns = 0.0;
+    double meanP99Ns = 0.0;
+    double meanP999Ns = 0.0;
+    double meanP9999Ns = 0.0;
+    double meanMaxNs = 0.0;
+    double stddevThroughput = 0.0;
 };
 
 static void printBenchmarkReport(const BenchmarkStats &stats)
 {
     std::cout << "==============================\n";
-    std::cout << "Stage 4 Benchmark Report\n";
+    std::cout << "Stage 5 Benchmark Report\n";
     std::cout << "==============================\n";
     std::cout << "Ticks: " << stats.totalTicks << '\n';
     std::cout << "Orders: " << stats.totalOrders << '\n';
@@ -299,7 +316,65 @@ static void printBenchmarkReport(const BenchmarkStats &stats)
     std::cout << "  p90: " << stats.p90Ns << '\n';
     std::cout << "  p95: " << stats.p95Ns << '\n';
     std::cout << "  p99: " << stats.p99Ns << '\n';
+    std::cout << "  p99.9: " << stats.p999Ns << '\n';
+    std::cout << "  p99.99: " << stats.p9999Ns << '\n';
     std::cout << "  max: " << stats.maxNs << '\n';
+    std::cout << "==============================\n";
+}
+
+static double meanValue(const std::vector<double> &values)
+{
+    if (values.empty())
+    {
+        return 0.0;
+    }
+
+    double total = 0.0;
+    for (double value : values)
+    {
+        total += value;
+    }
+
+    return total / static_cast<double>(values.size());
+}
+
+static double stddevValue(const std::vector<double> &values)
+{
+    if (values.size() < 2)
+    {
+        return 0.0;
+    }
+
+    const double avg = meanValue(values);
+    double variance = 0.0;
+    for (double value : values)
+    {
+        const double diff = value - avg;
+        variance += diff * diff;
+    }
+
+    return std::sqrt(variance / static_cast<double>(values.size() - 1));
+}
+
+static void printBenchmarkSuiteReport(const BenchmarkSuiteSummary &summary)
+{
+    std::cout << "==============================\n";
+    std::cout << "Stage 5 Benchmark Suite\n";
+    std::cout << "==============================\n";
+    std::cout << "Repeats: " << summary.repeats << '\n';
+    std::cout << "Mean throughput: " << std::fixed << std::setprecision(2)
+              << summary.meanThroughput << " ticks/sec\n";
+    std::cout << "Stddev throughput: " << std::fixed << std::setprecision(2)
+              << summary.stddevThroughput << " ticks/sec\n";
+    std::cout << "Mean latency (ns):\n";
+    std::cout << "  min: " << summary.meanMinNs << '\n';
+    std::cout << "  p50: " << summary.meanP50Ns << '\n';
+    std::cout << "  p90: " << summary.meanP90Ns << '\n';
+    std::cout << "  p95: " << summary.meanP95Ns << '\n';
+    std::cout << "  p99: " << summary.meanP99Ns << '\n';
+    std::cout << "  p99.9: " << summary.meanP999Ns << '\n';
+    std::cout << "  p99.99: " << summary.meanP9999Ns << '\n';
+    std::cout << "  max: " << summary.meanMaxNs << '\n';
     std::cout << "==============================\n";
 }
 
@@ -309,6 +384,71 @@ static uint64_t measureNanoseconds(std::function<void()> fn)
     fn();
     const auto end = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+}
+
+static BenchmarkStats runBenchmark(int tickCount, int64_t spreadThreshold);
+
+static BenchmarkSuiteSummary runBenchmarkSuite(int tickCount, int64_t spreadThreshold, int repeats)
+{
+    std::vector<BenchmarkStats> runs;
+    runs.reserve(static_cast<size_t>(repeats));
+
+    std::vector<double> throughputValues;
+    throughputValues.reserve(static_cast<size_t>(repeats));
+    std::vector<double> minValues;
+    minValues.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p50Values;
+    p50Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p90Values;
+    p90Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p95Values;
+    p95Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p99Values;
+    p99Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p999Values;
+    p999Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> p9999Values;
+    p9999Values.reserve(static_cast<size_t>(repeats));
+    std::vector<double> maxValues;
+    maxValues.reserve(static_cast<size_t>(repeats));
+
+    for (int i = 0; i < repeats; ++i)
+    {
+        const BenchmarkStats stats = runBenchmark(tickCount, spreadThreshold);
+        runs.push_back(stats);
+
+        throughputValues.push_back(stats.throughput);
+        minValues.push_back(static_cast<double>(stats.minNs));
+        p50Values.push_back(static_cast<double>(stats.p50Ns));
+        p90Values.push_back(static_cast<double>(stats.p90Ns));
+        p95Values.push_back(static_cast<double>(stats.p95Ns));
+        p99Values.push_back(static_cast<double>(stats.p99Ns));
+        p999Values.push_back(static_cast<double>(stats.p999Ns));
+        p9999Values.push_back(static_cast<double>(stats.p9999Ns));
+        maxValues.push_back(static_cast<double>(stats.maxNs));
+    }
+
+    BenchmarkSuiteSummary summary;
+    summary.repeats = repeats;
+    summary.meanThroughput = meanValue(throughputValues);
+    summary.meanMinNs = meanValue(minValues);
+    summary.meanP50Ns = meanValue(p50Values);
+    summary.meanP90Ns = meanValue(p90Values);
+    summary.meanP95Ns = meanValue(p95Values);
+    summary.meanP99Ns = meanValue(p99Values);
+    summary.meanP999Ns = meanValue(p999Values);
+    summary.meanP9999Ns = meanValue(p9999Values);
+    summary.meanMaxNs = meanValue(maxValues);
+    summary.stddevThroughput = stddevValue(throughputValues);
+
+    for (const BenchmarkStats &stats : runs)
+    {
+        printBenchmarkReport(stats);
+    }
+
+    printBenchmarkSuiteReport(summary);
+
+    return summary;
 }
 
 static void runMicrobenchmarks()
@@ -344,7 +484,7 @@ static void runMicrobenchmarks()
         } });
 
     std::cout << "==============================\n";
-    std::cout << "Stage 4 Microbenchmarks\n";
+    std::cout << "Stage 5 Microbenchmarks\n";
     std::cout << "==============================\n";
     std::cout << "Iterations: " << iterations << '\n';
     std::cout << "OrderBook::update: " << orderBookNs << " ns\n";
@@ -419,6 +559,8 @@ static BenchmarkStats runBenchmark(int tickCount, int64_t spreadThreshold)
         stats.p90Ns = percentileValue(latencies, 90.0);
         stats.p95Ns = percentileValue(latencies, 95.0);
         stats.p99Ns = percentileValue(latencies, 99.0);
+        stats.p999Ns = percentileValue(latencies, 99.9);
+        stats.p9999Ns = percentileValue(latencies, 99.99);
         stats.maxNs = sorted.back();
     }
 
@@ -462,6 +604,20 @@ static int parseTicks(int argc, char **argv)
     return 100000;
 }
 
+static int parseRepeats(int argc, char **argv)
+{
+    for (int i = 1; i < argc; ++i)
+    {
+        std::string arg = argv[i];
+        if (arg == "--repeats" && i + 1 < argc)
+        {
+            return std::max(1, std::stoi(argv[i + 1]));
+        }
+    }
+
+    return 5;
+}
+
 static RunMode parseMode(int argc, char **argv)
 {
     if (argc > 1)
@@ -491,12 +647,15 @@ int main(int argc, char **argv)
     }
 
     const int tickCount = parseTicks(argc, argv);
+    const int repeats = parseRepeats(argc, argv);
     const int64_t spreadThreshold = 5;
-    const BenchmarkStats stats = runBenchmark(tickCount, spreadThreshold);
 
     std::cout << "Benchmark config: ticks=" << tickCount
-              << ", threshold=" << spreadThreshold << '\n';
-    printBenchmarkReport(stats);
+              << ", threshold=" << spreadThreshold
+              << ", repeats=" << repeats << '\n';
+
+    const BenchmarkSuiteSummary suite = runBenchmarkSuite(tickCount, spreadThreshold, repeats);
+    (void)suite;
     runMicrobenchmarks();
 
     return 0;

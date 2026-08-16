@@ -72,6 +72,31 @@ if (ask - bid > threshold) → BUY
 
 ---
 
+## Benchmark Infrastructure (Stage 5)
+
+Dedicated benchmark tooling is available under [benchmarks/end_to_end](benchmarks/end_to_end/README.md).
+
+Run an end-to-end benchmark suite:
+
+```bash
+./benchmarks/end_to_end/run_benchmark.sh --ticks 100000 --repeats 5
+```
+
+Compare the latest run against the previous run:
+
+```bash
+./benchmarks/end_to_end/compare_results.sh
+```
+
+Generated artifacts are stored in `results/end_to_end/`:
+
+* Timestamped benchmark report with hardware/software/workload metadata
+* Raw benchmark output in `results/end_to_end/raw/`
+* Persistent run history in `results/end_to_end/history.csv`
+* Latest report snapshot in `results/end_to_end/latest.txt`
+
+---
+
 ## Next Steps
 
 * Add multi-threading
