@@ -4,6 +4,7 @@ This folder contains the dedicated Stage 5 benchmark tooling.
 
 ## Files
 
+- `trading_engine_bench.cpp`: dedicated benchmark binary source (separate from runtime `main.cpp`).
 - `run_benchmark.sh`: builds the benchmark binary, runs workload, records full report, raw output, and appends history.
 - `compare_results.sh`: compares the last two benchmark runs from history.
 

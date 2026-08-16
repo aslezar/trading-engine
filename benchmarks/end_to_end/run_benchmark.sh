@@ -60,10 +60,10 @@ compiler_version="$($CXX_BIN --version | head -n 1)"
 read -r -a build_flags_array <<< "$BUILD_FLAGS"
 
 echo "Building benchmark binary..."
-"$CXX_BIN" "${build_flags_array[@]}" "$ROOT_DIR/main.cpp" -o "$BIN_PATH"
+"$CXX_BIN" "${build_flags_array[@]}" "$ROOT_DIR/benchmarks/end_to_end/trading_engine_bench.cpp" -o "$BIN_PATH"
 
 echo "Running benchmark workload..."
-raw_output="$($BIN_PATH --benchmark --ticks "$TICKS" --repeats "$REPEATS")"
+raw_output="$($BIN_PATH --ticks "$TICKS" --repeats "$REPEATS" --threshold "$THRESHOLD")"
 
 raw_file="$RAW_DIR/${timestamp_id}_${commit_hash}.raw.txt"
 report_file="$RESULTS_DIR/${timestamp_id}_${commit_hash}.txt"

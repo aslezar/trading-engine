@@ -30,17 +30,18 @@ Market Data → Order Book → Strategy → Order Manager → Exchange
 
 ---
 
-## Build & Run
+## Runtime Engine
 
-### Compile
-```bash
-g++ -O2 -std=c++20 main.cpp -o engine
-````
-
-### Run
+Build the runtime/live engine binary:
 
 ```bash
-./engine
+g++ -O2 -std=c++20 main.cpp -o trading_engine_runtime
+```
+
+Run the runtime engine (live mode):
+
+```bash
+./trading_engine_runtime --live
 ```
 
 ---
@@ -76,16 +77,51 @@ if (ask - bid > threshold) → BUY
 
 Dedicated benchmark tooling is available under [benchmarks/end_to_end](benchmarks/end_to_end/README.md).
 
-Run an end-to-end benchmark suite:
+Runtime and benchmark flows are now split:
+
+* `main.cpp` builds the runtime/live engine only.
+* `benchmarks/end_to_end/trading_engine_bench.cpp` builds the benchmark binary only.
+
+Run end-to-end benchmark (default-style run):
 
 ```bash
 ./benchmarks/end_to_end/run_benchmark.sh --ticks 100000 --repeats 5
+```
+
+Run with custom threshold:
+
+```bash
+./benchmarks/end_to_end/run_benchmark.sh --ticks 100000 --repeats 5 --threshold 5
+```
+
+Run with custom compiler:
+
+```bash
+./benchmarks/end_to_end/run_benchmark.sh --ticks 100000 --repeats 5 --cxx g++-16
+```
+
+Run with custom build flags:
+
+```bash
+./benchmarks/end_to_end/run_benchmark.sh --ticks 100000 --repeats 5 --build-flags "-O3 -march=native -std=c++20"
 ```
 
 Compare the latest run against the previous run:
 
 ```bash
 ./benchmarks/end_to_end/compare_results.sh
+```
+
+View the latest generated report:
+
+```bash
+cat results/end_to_end/latest.txt
+```
+
+View benchmark run history:
+
+```bash
+cat results/end_to_end/history.csv
 ```
 
 Generated artifacts are stored in `results/end_to_end/`:
